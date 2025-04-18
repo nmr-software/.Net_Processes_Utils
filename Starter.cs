@@ -81,10 +81,7 @@ namespace Nmr.Utils.Processes {
                     output.InitLocals = body.InitLocals;
 
                     var dili = output.GetDynamicILInfo();
-
-                    ILInfoGetTokenVisitor visitor = new ILInfoGetTokenVisitor(dili, ils);
-                    new ILReader(target).Accept(visitor);
-
+                    ILProcessor.TransferTokens(target, dili, ils);
                     dili.SetCode(ils, target.GetMethodBody().MaxStackSize);
                     dili.SetExceptions(GetExceptionBytes(body));
                     byte[] localSignature = typeof(Process).Module.ResolveSignature(body.LocalSignatureMetadataToken);
