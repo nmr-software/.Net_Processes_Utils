@@ -17,7 +17,7 @@ public class TestStarter {
     [DataRow(0, false)]
     [DataRow(Starter.CREATE_NEW_CONSOLE, true)]
     public void TestNewConsole(int flag, bool hasConhost) {
-        p = Starter.startWithFlags(psi, flag);
+        p = Starter.StartWithFlags(psi, flag);
         Thread.Sleep(100);
         Assert.AreEqual(hasConhost, getChild() != null);
     }

@@ -40,9 +40,11 @@ namespace Nmr.Utils.Processes {
                     }
                     int* i32 = (int*)(++pos);
 
+                    string forDebugging  = "";
                     switch (op.OperandType) {
                         case OperandType.InlineMethod:
                             var m = resolver.AsMethod(*i32);
+                            forDebugging = m.Name;
                             *i32 = dili.GetTokenFor(m.MethodHandle, m.DeclaringType.TypeHandle);
                             break;
                         case OperandType.InlineField:

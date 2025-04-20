@@ -1,8 +1,8 @@
-﻿using ClrTest.Reflection;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Xml.Linq;
 
 namespace Nmr.Utils.Processes {
     public class Starter {
@@ -32,7 +32,7 @@ namespace Nmr.Utils.Processes {
 
         protected static DynamicMethod dynMethod = cache();
 
-        public static Process startWithFlags(ProcessStartInfo info, int flags, bool tolerateShellExecute = false) {
+        public static Process StartWithFlags(ProcessStartInfo info, int flags, bool tolerateShellExecute = false) {
             if (info == null) throw new ArgumentNullException(nameof(info));
             if (info.UseShellExecute) {
                 if (tolerateShellExecute) {
@@ -44,7 +44,7 @@ namespace Nmr.Utils.Processes {
 
             var result = new Process();
             result.StartInfo = info;
-            var dele = (CreateProc) dynMethod.CreateDelegate(typeof(CreateProc), result);
+            var dele = (CreateProc)dynMethod.CreateDelegate(typeof(CreateProc), result);
             return dele(info, flags) ? result : null;
         }
 
@@ -76,8 +76,14 @@ namespace Nmr.Utils.Processes {
 
                     ils[i - 4] = 0x04; // ldarg.2
 
+                    AssemblyBuilder ab = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("ProcessWrapper"), AssemblyBuilderAccess.Run);
+                    ModuleBuilder mb = ab.DefineDynamicModule("ProcessWrapper");
+                    mb.SetCustomAttribute(new CustomAttributeBuilder(
+                        typeof(System.Security.SecurityCriticalAttribute).GetConstructor(Type.EmptyTypes), new object[] { }));
+                    var dynType = mb.DefineType("ProcessWrapper", TypeAttributes.Public | TypeAttributes.Class, typeof(Process)).GetType();
+
                     Type[] parameters = new Type[] { typeof(Process), typeof(ProcessStartInfo), typeof(int) };
-                    var output = new DynamicMethod("CreateProcessWithFlags", typeof(bool), parameters, typeof(Process), true);
+                    var output = new DynamicMethod("CreateProcessWithFlags", typeof(bool), parameters, dynType, true);
                     output.InitLocals = body.InitLocals;
 
                     var dili = output.GetDynamicILInfo();
@@ -123,6 +129,18 @@ namespace Nmr.Utils.Processes {
             }
 
             return exceptionBytes;
+        }
+
+        static System.Collections.ArrayList securityAttributeFinder() {
+            var module = typeof(System.Diagnostics.Process).Module;
+            var l = new System.Collections.ArrayList();
+            foreach (var type in module.GetTypes()) {
+                if (type.GetCustomAttribute<System.Security.SecuritySafeCriticalAttribute>() != null) {
+                    l.Add(type.FullName);
+                }
+            }
+            l.Sort();
+            return l;
         }
     }
 }
