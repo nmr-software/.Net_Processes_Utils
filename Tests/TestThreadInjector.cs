@@ -1,5 +1,7 @@
 using System.Diagnostics;
 
+namespace Tests;
+
 [TestClass]
 public class TestThreadInjector {
 
@@ -24,13 +26,35 @@ public class TestThreadInjector {
         Assert.IsTrue(p.WaitForExit(3000), "Process should have exited");
     }
 
+    private void AssertOneSuspendedThread() {
+        p.Refresh();
+        Assert.AreEqual(1, p.Threads.Count, "Process should have 1 thread left");
+        Assert.AreEqual(ThreadWaitReason.Suspended, p.Threads[0].WaitReason, "Thread should be suspended");
+    }
+
     [TestMethod]
     public void TestInjectCausingSuspension() {
         var i = new ThreadInjector(p);
         i.Inject();
         Assert.IsFalse(p.WaitForExit(3000), "Process should not have exited");
-        Assert.AreEqual(1, p.Threads.Count, "Process should have 1 thread left");
-        Assert.AreEqual(ThreadWaitReason.Suspended, p.Threads[0].WaitReason, "Thread should be suspended");
+        AssertOneSuspendedThread();
+    }
+
+    [TestMethod]
+    public void TestCanaryWaiting() {
+        var i = new ThreadInjector(p);
+        Assert.IsTrue(i.Inject());
+        Assert.IsFalse(i.WaitForCanaryThread(1000));
+        Assert.IsTrue(i.WaitForCanaryThread(2000));
+        AssertOneSuspendedThread();
+    }
+
+    [TestMethod]
+    public void TestUninject() {
+        var i = new ThreadInjector(p);
+        Assert.IsTrue(i.Inject());
+        i.Uninject();
+        Assert.IsTrue(p.WaitForExit(3000), "Process should have exited");
     }
 
     [TestMethod]
